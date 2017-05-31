@@ -38,6 +38,7 @@ import (
 var (
 	flagT = flag.Bool("t", false, "Behave like tee(1)")
 	flagC = flag.Int("c", 5000, "Max (uncompressed) logfile size in kB")
+	flagR = flag.Int("r", 0, "Max number of roll files to keep, 0 is unlimited")
 )
 
 func init() {
@@ -57,7 +58,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	r, err := rotator.New(os.Stdin, flag.Arg(0), int64(*flagC), *flagT)
+	r, err := rotator.New(os.Stdin, flag.Arg(0), int64(*flagC), *flagT, *flagR)
 	if err != nil {
 		log.Fatal(err)
 	}

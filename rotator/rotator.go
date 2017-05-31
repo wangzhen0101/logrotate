@@ -50,6 +50,7 @@ var nl = []byte{'\n'}
 type Rotator struct {
 	size      int64
 	threshold int64
+	maxRolls  int
 	filename  string
 	in        *bufio.Scanner
 	out       *os.File
@@ -59,7 +60,7 @@ type Rotator struct {
 
 // New returns a new Rotator that is ready to start rotating logs from its
 // input.
-func New(in io.Reader, filename string, thresholdKB int64, tee bool) (*Rotator, error) {
+func New(in io.Reader, filename string, thresholdKB int64, tee bool, maxRolls int) (*Rotator, error) {
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
 	if err != nil {
 		return nil, err
@@ -73,6 +74,7 @@ func New(in io.Reader, filename string, thresholdKB int64, tee bool) (*Rotator, 
 	return &Rotator{
 		size:      stat.Size(),
 		threshold: 1000 * thresholdKB,
+		maxRolls:  maxRolls,
 		filename:  filename,
 		in:        bufio.NewScanner(in),
 		out:       f,
@@ -155,6 +157,14 @@ func (r *Rotator) rotate() error {
 	err = os.Rename(r.filename, rotname)
 	if err != nil {
 		return err
+	}
+	if r.maxRolls != 0 {
+		for n := maxNum + 1 - r.maxRolls; ; n-- {
+			err := os.Remove(fmt.Sprintf("%s.%d.gz", r.filename, n))
+			if err != nil {
+				break
+			}
+		}
 	}
 	r.out, err = os.OpenFile(r.filename, os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
