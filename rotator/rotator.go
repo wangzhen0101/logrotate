@@ -82,12 +82,14 @@ func New(in io.Reader, filename string, thresholdKB int64, tee bool) (*Rotator, 
 
 // Run begins reading lines from the input and rotating logs as necessary.
 func (r *Rotator) Run() error {
-	for r.in.Scan() {
-		if r.size >= r.threshold {
-			if err := r.rotate(); err != nil {
-				return err
-			}
+	// Rotate file immediately if it is already over the size limit.
+	if r.size >= r.threshold {
+		if err := r.rotate(); err != nil {
+			return err
 		}
+	}
+
+	for r.in.Scan() {
 
 		line := r.in.Bytes()
 
@@ -100,6 +102,11 @@ func (r *Rotator) Run() error {
 		}
 
 		r.size += int64(n + m)
+		if r.size >= r.threshold {
+			if err := r.rotate(); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
