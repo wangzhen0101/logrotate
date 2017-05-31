@@ -40,6 +40,10 @@ import (
 	"sync"
 )
 
+// nl is a byte slice containing a newline byte.  It is used to avoid creating
+// additional allocations when writing newlines to the log file.
+var nl = []byte{'\n'}
+
 // A Rotator reads log lines from an input source and writes them to a file,
 // splitting it up into gzipped chunks once the filesize reaches a certain
 // threshold.
@@ -88,11 +92,11 @@ func (r *Rotator) Run() error {
 		line := r.in.Bytes()
 
 		n, _ := r.out.Write(line)
-		m, _ := r.out.Write([]byte{'\n'})
+		m, _ := r.out.Write(nl)
 
 		if r.tee {
 			os.Stdout.Write(line)
-			os.Stdout.Write([]byte{'\n'})
+			os.Stdout.Write(nl)
 		}
 
 		r.size += int64(n + m)
