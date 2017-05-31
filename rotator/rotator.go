@@ -87,6 +87,7 @@ func (r *Rotator) Run() error {
 		if err := r.rotate(); err != nil {
 			return err
 		}
+		r.size = 0
 	}
 
 	for r.in.Scan() {
@@ -105,6 +106,7 @@ func (r *Rotator) Run() error {
 			if err := r.rotate(); err != nil {
 				return err
 			}
+			r.size = 0
 		}
 	}
 
@@ -158,7 +160,6 @@ func (r *Rotator) rotate() error {
 	if err != nil {
 		return err
 	}
-	r.size = 0
 
 	r.wg.Add(1)
 	go func() {
