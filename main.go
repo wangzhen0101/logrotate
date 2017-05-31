@@ -1,4 +1,5 @@
 // Copyright (c) 2017, moshee
+// Copyright (c) 2017, Josh Rickmar <jrick@devio.us>
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -31,7 +32,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/moshee/logrotate/rotator"
+	"github.com/jrick/logrotate/rotator"
 )
 
 var (

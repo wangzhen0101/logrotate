@@ -90,7 +90,6 @@ func (r *Rotator) Run() error {
 	}
 
 	for r.in.Scan() {
-
 		line := r.in.Bytes()
 
 		n, _ := r.out.Write(line)
