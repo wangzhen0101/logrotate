@@ -158,7 +158,7 @@ func (r *Rotator) rotate() error {
 	if err != nil {
 		return err
 	}
-	if r.maxRolls != 0 {
+	if r.maxRolls > 0 {
 		for n := maxNum + 1 - r.maxRolls; ; n-- {
 			err := os.Remove(fmt.Sprintf("%s.%d.gz", r.filename, n))
 			if err != nil {
