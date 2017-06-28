@@ -44,23 +44,22 @@ import (
 // additional allocations when writing newlines to the log file.
 var nl = []byte{'\n'}
 
-// A Rotator reads log lines from an input source and writes them to a file,
-// splitting it up into gzipped chunks once the filesize reaches a certain
-// threshold.
+// A Rotator writes input to a file, splitting it up into gzipped chunks once
+// the filesize reaches a certain threshold.
 type Rotator struct {
 	size      int64
 	threshold int64
 	maxRolls  int
 	filename  string
-	in        *bufio.Reader
 	out       *os.File
 	tee       bool
 	wg        sync.WaitGroup
 }
 
-// New returns a new Rotator that is ready to start rotating logs from its
-// input.
-func New(in io.Reader, filename string, thresholdKB int64, tee bool, maxRolls int) (*Rotator, error) {
+// New returns a new Rotator.  The rotator can be used either by reading input
+// from an io.Reader by calling Run, or writing directly to the Rotator with
+// Write.
+func New(filename string, thresholdKB int64, tee bool, maxRolls int) (*Rotator, error) {
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
 	if err != nil {
 		return nil, err
@@ -76,14 +75,19 @@ func New(in io.Reader, filename string, thresholdKB int64, tee bool, maxRolls in
 		threshold: 1000 * thresholdKB,
 		maxRolls:  maxRolls,
 		filename:  filename,
-		in:        bufio.NewReader(in),
 		out:       f,
 		tee:       tee,
 	}, nil
 }
 
-// Run begins reading lines from the input and rotating logs as necessary.
-func (r *Rotator) Run() error {
+// Run begins reading lines from the reader and rotating logs as necessary.  Run
+// should not be called concurrently with Write.
+//
+// Prefer to use Rotator as a writer instead to avoid unnecessary scanning of
+// input, as this job is better handled using io.Pipe.
+func (r *Rotator) Run(reader io.Reader) error {
+	in := bufio.NewReader(reader)
+
 	// Rotate file immediately if it is already over the size limit.
 	if r.size >= r.threshold {
 		if err := r.rotate(); err != nil {
@@ -93,7 +97,7 @@ func (r *Rotator) Run() error {
 	}
 
 	for {
-		line, isPrefix, err := r.in.ReadLine()
+		line, isPrefix, err := in.ReadLine()
 		if err != nil {
 			return err
 		}
@@ -121,6 +125,23 @@ func (r *Rotator) Run() error {
 			r.size = 0
 		}
 	}
+}
+
+// Write implements the io.Writer interface for Rotator.  If p ends in a newline
+// and the file has exceeded the threshold size, the file is rotated.
+func (r *Rotator) Write(p []byte) (n int, err error) {
+	n, _ = r.out.Write(p)
+	r.size += int64(n)
+
+	if r.size >= r.threshold && len(p) > 0 && p[len(p)-1] == '\n' {
+		err := r.rotate()
+		if err != nil {
+			return 0, err
+		}
+		r.size = 0
+	}
+
+	return n, nil
 }
 
 // Close closes the output logfile.

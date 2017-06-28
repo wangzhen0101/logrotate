@@ -58,13 +58,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	r, err := rotator.New(os.Stdin, flag.Arg(0), int64(*flagC), *flagT, *flagR)
+	r, err := rotator.New(flag.Arg(0), int64(*flagC), *flagT, *flagR)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer r.Close()
 
-	if err := r.Run(); err != nil {
+	if err := r.Run(os.Stdin); err != nil {
 		log.Print(err)
 		return
 	}
