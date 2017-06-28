@@ -52,7 +52,7 @@ type Rotator struct {
 	threshold int64
 	maxRolls  int
 	filename  string
-	in        *bufio.Scanner
+	in        *bufio.Reader
 	out       *os.File
 	tee       bool
 	wg        sync.WaitGroup
@@ -76,7 +76,7 @@ func New(in io.Reader, filename string, thresholdKB int64, tee bool, maxRolls in
 		threshold: 1000 * thresholdKB,
 		maxRolls:  maxRolls,
 		filename:  filename,
-		in:        bufio.NewScanner(in),
+		in:        bufio.NewReader(in),
 		out:       f,
 		tee:       tee,
 	}, nil
@@ -92,27 +92,35 @@ func (r *Rotator) Run() error {
 		r.size = 0
 	}
 
-	for r.in.Scan() {
-		line := r.in.Bytes()
-
-		n, _ := r.out.Write(line)
-		m, _ := r.out.Write(nl)
-
-		if r.tee {
-			os.Stdout.Write(line)
-			os.Stdout.Write(nl)
+	for {
+		line, isPrefix, err := r.in.ReadLine()
+		if err != nil {
+			return err
 		}
 
-		r.size += int64(n + m)
+		n, _ := r.out.Write(line)
+		r.size += int64(n)
+		if r.tee {
+			os.Stdout.Write(line)
+		}
+		if isPrefix {
+			continue
+		}
+
+		m, _ := r.out.Write(nl)
+		if r.tee {
+			os.Stdout.Write(nl)
+		}
+		r.size += int64(m)
+
 		if r.size >= r.threshold {
-			if err := r.rotate(); err != nil {
+			err := r.rotate()
+			if err != nil {
 				return err
 			}
 			r.size = 0
 		}
 	}
-
-	return nil
 }
 
 // Close closes the output logfile.
