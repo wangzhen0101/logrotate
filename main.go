@@ -32,7 +32,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/jrick/logrotate/rotator"
+	"github.com/wangzhen0101/logrotate/rotator"
 )
 
 var (
